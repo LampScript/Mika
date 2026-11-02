@@ -113,15 +113,16 @@ class SharedWakeLock(private val lock: WakeLockPort) {
 }
 
 /**
- * 屏幕锁用 SCREEN_DIM_WAKE_LOCK:屏幕保持开着,用户一段时间没碰手机时由系统照常调暗,
+ * 屏幕锁默认用 SCREEN_DIM_WAKE_LOCK:屏幕保持开着,用户一段时间没碰手机时由系统照常调暗,
  * 用户一碰又回到原来的亮度。不改系统亮度,也不调亮。调暗时屏幕仍是开着、可交互的状态,
  * 注入的触摸照样送达;Agent 操作的是另一块虚拟显示屏,那边的输入也不受主屏明暗影响。
+ * 用户在设置里打开「保持全亮」时换成 SCREEN_BRIGHT_WAKE_LOCK:保持用户当前的亮度,不调暗(也不调亮)。
  * 这类锁已标为弃用(推荐窗口的 FLAG_KEEP_SCREEN_ON),但 Mika 在后台跑任务时没有自己的窗口,
  * 而前台服务持有的这类锁仍然有效。
  */
-class ScreenWakeLock(context: Context) : WakeLockPort {
+class ScreenWakeLock(context: Context, bright: Boolean = false) : WakeLockPort {
     private val lock = context.getSystemService(PowerManager::class.java)
-        .newWakeLock(LEVEL, "Mika:task")
+        .newWakeLock(levelFor(bright), "Mika:task")
         .apply { setReferenceCounted(false) }
 
     override fun acquire() = lock.acquire(MAX_HOLD_MS)
@@ -131,6 +132,12 @@ class ScreenWakeLock(context: Context) : WakeLockPort {
         /** 保持亮屏但允许系统按超时调暗。 */
         @Suppress("DEPRECATION")
         const val LEVEL = PowerManager.SCREEN_DIM_WAKE_LOCK
+
+        /** 保持全亮:不让系统按超时调暗。 */
+        @Suppress("DEPRECATION")
+        const val BRIGHT_LEVEL = PowerManager.SCREEN_BRIGHT_WAKE_LOCK
+
+        fun levelFor(bright: Boolean) = if (bright) BRIGHT_LEVEL else LEVEL
 
         /** 兜底上限,防止哪条路径漏了释放;正常由任务状态释放。 */
         private const val MAX_HOLD_MS = 6 * 60 * 60 * 1000L

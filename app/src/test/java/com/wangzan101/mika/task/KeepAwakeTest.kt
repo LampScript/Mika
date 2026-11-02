@@ -151,5 +151,13 @@ class KeepAwakeTest {
     @Test
     fun screenLockLetsTheSystemDim() {
         assertEquals(android.os.PowerManager.SCREEN_DIM_WAKE_LOCK, ScreenWakeLock.LEVEL)
+        assertEquals(ScreenWakeLock.LEVEL, ScreenWakeLock.levelFor(bright = false))
+    }
+
+    /** 设置里打开「保持全亮」:换成不调暗的那种锁。 */
+    @Suppress("DEPRECATION")
+    @Test
+    fun brightSettingKeepsFullBrightness() {
+        assertEquals(android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK, ScreenWakeLock.levelFor(bright = true))
     }
 }

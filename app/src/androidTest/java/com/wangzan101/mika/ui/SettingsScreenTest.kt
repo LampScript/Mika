@@ -263,6 +263,26 @@ class SettingsScreenTest {
         assertEquals(listOf("screen:false", "mute:false"), changes)
     }
 
+    /** 常亮开着时多一行「保持全亮」(默认关);常亮关了就不显示,没有意义。 */
+    @Test
+    fun keepBrightShowsOnlyWithKeepScreenOn() {
+        val changes = mutableListOf<Boolean>()
+        var on by mutableStateOf(true)
+        compose.setContent {
+            DuringWorkScreen(
+                keepScreenOn = on, onKeepScreenOn = { on = it }, muteTarget = true, onMuteTarget = {},
+                parallel = null, onParallelMax = {}, onBack = {},
+                keepScreenBright = false, onKeepScreenBright = { changes += it },
+            )
+        }
+        compose.onNodeWithText("保持全亮").assertIsDisplayed()
+        compose.onNodeWithTag("work-keep-screen-bright").performClick()
+        assertEquals(listOf(true), changes)
+        compose.onNodeWithTag("work-keep-screen-on").performClick()
+        compose.waitForIdle()
+        compose.onAllNodesWithText("保持全亮").assertCountEquals(0)
+    }
+
     /** 干活时 › 操作节奏:快、标准(默认)、像人三选一,点了回调新值。 */
     @Test
     fun operatingPaceIsOneChoiceOfThree() {

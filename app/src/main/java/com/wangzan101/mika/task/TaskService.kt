@@ -112,8 +112,11 @@ class TaskService : Service() {
 
     internal val clipLock get() = center.clipLock
     internal val takeoverQueue get() = center.takeoverQueue
-    /** 几个任务共用的屏幕常亮锁。 */
-    internal val wakeLock by lazy { SharedWakeLock(ScreenWakeLock(this)) }
+    /** 几个任务共用的屏幕常亮锁:默认允许调暗;设置里打开「保持全亮」的任务用 [brightWakeLock]。 */
+    internal val dimWakeLock by lazy { SharedWakeLock(ScreenWakeLock(this)) }
+    internal val brightWakeLock by lazy { SharedWakeLock(ScreenWakeLock(this, bright = true)) }
+    /** 新开的任务用哪一把:按此刻的设置选,开跑后不再换。 */
+    internal val wakeLock: SharedWakeLock get() = if (FeatureFlags.get(this).keepScreenBright()) brightWakeLock else dimWakeLock
 
     private fun limit(): ParallelLimit {
         if (!parallel) return ParallelLimit(1, null)

@@ -19,6 +19,7 @@ class SelfConfigImpl(
         SelfConfig.Option(KEY_THEME, "外观", flags.themeMode().name.lowercase(), listOf("system", "light", "dark")),
         SelfConfig.Option(KEY_CAPSULE, "悬浮胶囊", flags.capsuleMode().name.lowercase(), listOf("off", "duringtasks", "always")),
         SelfConfig.Option(KEY_KEEP_ON, "干活时屏幕常亮", onOff(flags.keepScreenOn()), ON_OFF),
+        SelfConfig.Option(KEY_KEEP_BRIGHT, "常亮时保持全亮(不调暗)", onOff(flags.keepScreenBright()), ON_OFF),
     )
 
     override fun set(key: String, value: String): String? {
@@ -54,6 +55,7 @@ class SelfConfigImpl(
                 null
             }
             KEY_KEEP_ON -> bool { flags.setKeepScreenOn(it) }
+            KEY_KEEP_BRIGHT -> bool { flags.setKeepScreenBright(it) }
             else -> "there is no such setting"
         }
     }
@@ -68,5 +70,6 @@ class SelfConfigImpl(
         const val KEY_THEME = "appearance"
         const val KEY_CAPSULE = "capsule"
         const val KEY_KEEP_ON = "keep_screen_on"
+        const val KEY_KEEP_BRIGHT = "keep_screen_bright"
     }
 }

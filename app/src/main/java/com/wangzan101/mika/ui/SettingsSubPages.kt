@@ -181,7 +181,8 @@ private fun ChannelRowItem(title: String, whenText: String, row: ChannelRow, fix
 data class ParallelSetting(val max: Int, val limit: ParallelLimit)
 
 /**
- * 设置 › 任务运行:自主模式默认关;屏幕常亮、被操作的 App 静音默认开,可以关;[parallel] 不为空(实验开关打开了)时多一行同时进行的任务数。
+ * 设置 › 任务运行:自主模式默认关;屏幕常亮、被操作的 App 静音默认开,可以关;常亮开着时多一行「保持全亮」(默认关,照常调暗);
+ * [parallel] 不为空(实验开关打开了)时多一行同时进行的任务数。
  * 下面一组是操作节奏:快 / 标准(默认) / 像人,选了下一个任务起生效。
  */
 @Composable
@@ -193,6 +194,7 @@ fun DuringWorkScreen(
     operatingPace: OperatingPace = OperatingPace.DEFAULT, onOperatingPace: (OperatingPace) -> Unit = {},
     selfConfig: Boolean = false, onSelfConfig: (Boolean) -> Unit = {},
     stepLimit: Int? = null, onStepLimit: (Int?) -> Unit = {},
+    keepScreenBright: Boolean = false, onKeepScreenBright: (Boolean) -> Unit = {},
 ) {
     var editingLimit by remember { mutableStateOf(false) }
     var customLimit by remember { mutableStateOf("") }
@@ -206,6 +208,11 @@ fun DuringWorkScreen(
         GroupCard {
             ListRow(MikaIcons.Sun, stringResource(R.string.settings_keep_on), stringResource(R.string.settings_keep_on_sub), first = true, onClick = { onKeepScreenOn(!keepScreenOn) }) {
                 MikaSwitch(keepScreenOn, onKeepScreenOn, Modifier.testTag("work-keep-screen-on"))
+            }
+            if (keepScreenOn) {
+                ListRow(null, stringResource(R.string.settings_keep_bright), stringResource(R.string.settings_keep_bright_sub), onClick = { onKeepScreenBright(!keepScreenBright) }) {
+                    MikaSwitch(keepScreenBright, onKeepScreenBright, Modifier.testTag("work-keep-screen-bright"))
+                }
             }
             ListRow(MikaIcons.Mute, stringResource(R.string.settings_mute), stringResource(R.string.settings_mute_sub), onClick = { onMuteTarget(!muteTarget) }) {
                 MikaSwitch(muteTarget, onMuteTarget, Modifier.testTag("work-mute-target"))

@@ -14,7 +14,7 @@ class SelfConfigImplTest {
 
     @Test fun offersOnlyPreferencesAvailableToday() {
         val keys = SelfConfigImpl(flags()).options().map { it.key }.toSet()
-        assertEquals(setOf("operating_pace", "mute_apps", "appearance", "capsule", "keep_screen_on"), keys)
+        assertEquals(setOf("operating_pace", "mute_apps", "appearance", "capsule", "keep_screen_on", "keep_screen_bright"), keys)
     }
 
     @Test fun modelsKeysAndAnythingThatDeletesDataAreNotOffered() {
@@ -37,6 +37,9 @@ class SelfConfigImplTest {
         assertEquals(CapsuleMode.Off, f.capsuleMode())
         assertNull(s.set("keep_screen_on", "off"))
         assertEquals(false, f.keepScreenOn())
+        assertEquals(false, f.keepScreenBright())
+        assertNull(s.set("keep_screen_bright", "on"))
+        assertEquals(true, f.keepScreenBright())
     }
 
     @Test fun badValuesAndUnknownKeysAreReported() {
