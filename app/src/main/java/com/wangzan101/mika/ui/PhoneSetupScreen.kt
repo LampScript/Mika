@@ -520,7 +520,11 @@ private fun AutoReadHint() {
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Icon(MikaIcons.Check, null, Modifier.size(20.dp), tint = c.ok)
-        Text(PhoneSetupCopy.AUTO_READ_HINT, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
+        Column {
+            Text(PhoneSetupCopy.AUTO_READ_HINT, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
+            // 有的系统一进设置就停掉 Mika 的无障碍、冻结后台:读不到时填码通知已经在通知栏里了
+            Text(PhoneSetupCopy.AUTO_READ_FALLBACK, Modifier.padding(top = 4.dp), fontSize = 13.sp, lineHeight = 18.sp, color = c.ink2)
+        }
     }
 }
 

@@ -17,10 +17,21 @@ import org.junit.Test
 class PairingNoticeTest {
     @get:Rule val texts = ChineseTexts()
 
+    /** 找到配对窗口才弹输入框;还在找时先静静放一个(后台被冻结前就发出去),没在找时不发。 */
     @Test
-    fun codeEntryAppearsOnlyOnceThePairingWindowIsFound() {
-        assertNull(PairingNotice.of(BuiltinShellStatus.NotPaired, PairingDiscovery.Searching))
+    fun codeEntryPopsOnceThePairingWindowIsFoundAndWaitsQuietlyBefore() {
+        assertEquals(PairingNotice.EnterCode(null, quiet = true), PairingNotice.of(BuiltinShellStatus.NotPaired, PairingDiscovery.Searching))
+        assertEquals(PairingNotice.EnterCode(null, quiet = true), PairingNotice.of(BuiltinShellStatus.WirelessDebuggingOff, PairingDiscovery.Searching))
+        assertNull(PairingNotice.of(BuiltinShellStatus.NotPaired, PairingDiscovery.Idle))
         assertEquals(PairingNotice.EnterCode(37001), PairingNotice.of(BuiltinShellStatus.NotPaired, PairingDiscovery.Found(37001)))
+    }
+
+    /** 静静备好的那个:无障碍开着也马上发(要赶在冻结之前),之后不再提醒。 */
+    @Test
+    fun quietEntryIsPostedAtOnceAndNeverRealerts() {
+        val quiet = PairingNotice.EnterCode(null, quiet = true)
+        assertEquals(0L, PairingNotice.delayBefore(quiet, autoRead = true))
+        assertNull(PairingNotice.realertAfter(quiet, 0))
     }
 
     @Test
@@ -109,8 +120,8 @@ class PairingNoticeTest {
 
     @Test
     fun followingEndsOnlyWhenRunningOutsideARepair() {
-        // 重新配对时运行中的旧状态不算配好:不发、不结束
-        assertEquals(null to false, PairingNotice.follow(BuiltinShellStatus.Running, PairingDiscovery.Searching, repairing = true, submitted = false))
+        // 重新配对时运行中的旧状态不算配好:不结束,和没配对时一样先静静备好填码通知
+        assertEquals(PairingNotice.EnterCode(null, quiet = true) to false, PairingNotice.follow(BuiltinShellStatus.Running, PairingDiscovery.Searching, repairing = true, submitted = false))
         assertEquals(PairingNotice.Done to true, PairingNotice.follow(BuiltinShellStatus.Running, PairingDiscovery.Idle, repairing = false, submitted = false))
     }
 
