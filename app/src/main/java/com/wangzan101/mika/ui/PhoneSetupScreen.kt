@@ -157,6 +157,11 @@ fun PhoneSetupScreen(status: SystemStatus, repair: Boolean, onFix: (Fix) -> Unit
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         if (view.current == SetupStep.PairingCode) pairing.begin()
     }
+    // 走到配对一步后无障碍被系统断开(实测 OriginOS 一进系统设置就断开,过一阵又连上):不退回无障碍一步,
+    // 和跳过一样留在配对一步、改说在通知里填;又连上了照样自己读
+    LaunchedEffect(view.current) {
+        if (view.current == SetupStep.PairingCode) accessibilitySkipped = true
+    }
     val notificationsOff = view.notifyIssue == PairingNotifyIssue.NotificationsOff
     LaunchedEffect(notificationsOff) {
         if (notificationsOff && !askedNotifications) {
@@ -173,7 +178,12 @@ fun PhoneSetupScreen(status: SystemStatus, repair: Boolean, onFix: (Fix) -> Unit
         context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText(PhoneSetupCopy.USB_TITLE, usbCommand))
         Toast.makeText(context, PhoneSetupCopy.USB_COPIED, Toast.LENGTH_SHORT).show()
     }
-    val close = { pairing.cancelRepair(); onClose() }
+    // 没配好就不设置了:撤掉配对通知、不再找配对窗口(填码通知一到配对一步就放进通知栏,不撤会挂着;end 也结束重新配对)。
+    // 正在配对、连接时让它做完,配好了留着「配对成功」
+    val close = {
+        if (view.phase == SetupPhase.Guide || view.phase == SetupPhase.Failed) pairing.end() else pairing.cancelRepair()
+        onClose()
+    }
     BackHandler(onBack = close)
     PhoneSetupContent(
         view = view,

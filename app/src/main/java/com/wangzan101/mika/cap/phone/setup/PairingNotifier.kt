@@ -37,7 +37,7 @@ sealed interface PairingNotice {
          * 还在找时先在通知栏里静静放一个(不带端口,配对时再找):有的系统(实测 OriginOS)切到系统设置几秒就冻结后台的 Mika,
          * 等找到窗口再发就发不出去了,用户下拉通知栏要能找到它;
          * 配对阶段的失败(码不对、过期、窗口关了)留在通知里重填;要重新配对的失败(配对失效)找到配对窗口后也给输入框,
-         * 和无障碍读码认的一样(PairingScreen.attempt);别的失败请用户回 Mika。
+         * 和无障碍读码认的一样(PairingScreen.attempt),还在找时同样先静静备好;别的失败请用户回 Mika。
          */
         fun of(status: BuiltinShellStatus, discovery: PairingDiscovery): PairingNotice? {
             val port = (discovery as? PairingDiscovery.Found)?.port
@@ -47,6 +47,7 @@ sealed interface PairingNotice {
                 is BuiltinShellStatus.Failed -> when {
                     status.reason.duringPairing -> EnterCode(port, PhoneSetupCopy.notifyRetry(status.reason))
                     status.fix == BuiltinShellFix.RePair && port != null -> EnterCode(port)
+                    status.fix == BuiltinShellFix.RePair && discovery == PairingDiscovery.Searching -> EnterCode(null, quiet = true)
                     else -> Problem(PhoneSetupCopy.failure(status.reason).title)
                 }
                 BuiltinShellStatus.NotPaired, BuiltinShellStatus.WirelessDebuggingOff -> when (discovery) {
@@ -132,7 +133,10 @@ object PairingNotifier {
     /** 填码通知最多留这么久(和找配对窗口的时长一样),App 被杀了也不会一直挂着。 */
     private const val INPUT_TIMEOUT_MS = 10 * 60_000L
     private const val TAG = "MikaPairing"
-    /** 静静备好的填码通知单放一组、只让组摘要出声:组里没有摘要,它就不响不弹(minSdk 30 上的静音办法)。 */
+    /**
+     * 静静备好的填码通知单放一组、只让组摘要出声:组里没有摘要,它就不响不弹(minSdk 30 上的静音办法,
+     * 和 AndroidX 的 setSilent 在旧系统上的做法一样)。不另建低优先级频道:有的系统把低优先级通知折进「不重要的通知」,不好找。
+     */
     private const val QUIET_GROUP = "pairing_quiet"
 
     /** 确保有一个配对频道,返回要用的那个(引导页据此提示、打开它的设置页)。 */

@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * 一次配对的全过程:找配对窗口、无障碍开着时自己读配对码([PairingCodeReader])、
@@ -135,19 +136,21 @@ class PairingCoordinator(context: Context, private val control: BuiltinShellCont
         cancelNotice()
     }
 
-    /** 通知或引导页里填的码。不是 6 位数字就原地提示重填、不去试;对的话马上换成「正在配对」,免得输入框一直转圈。 */
-    fun submit(raw: String, port: Int?): Boolean {
+    /**
+     * 通知或引导页里填的码。不是 6 位数字就原地提示重填、不去试,返回 null;对的话马上换成「正在配对」,免得输入框一直转圈,
+     * 返回这次配对(通知那边据此等它做完再结束广播,见 [PairingCodeInput])。
+     */
+    fun submit(raw: String, port: Int?): Job? {
         val code = PairingCode.normalize(raw)
         if (code == null) {
             Log.i(TAG, "entered code is not 6 digits")
             show(PairingNotice.EnterCode(port, PhoneSetupCopy.NOTIFY_CODE_INVALID))
-            return false
+            return null
         }
         submitted = true
         begin()
         show(PairingNotice.Working)
-        scope.launch { pair(code, port) }
-        return true
+        return scope.launch { pair(code, port) }
     }
 
     private companion object {
@@ -157,11 +160,28 @@ class PairingCoordinator(context: Context, private val control: BuiltinShellCont
     }
 }
 
-/** 通知输入框的落点。 */
+/**
+ * 通知输入框的落点。有的系统(实测 OriginOS)会冻结后台的 Mika:收到广播时系统会先解冻它,广播一结束又可能马上冻住,
+ * 配对停在半路。所以等配对做完(或最多 [HOLD_MS])再结束广播,这段时间进程算在处理广播,不会被当成后台冻住。
+ */
 open class PairingCodeInput : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val code = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(PairingNotifier.KEY_CODE)?.toString() ?: return
         val port = intent.getIntExtra(PairingNotifier.EXTRA_PORT, -1).takeIf { it > 0 }
-        PhoneServices.of(context).pairing.submit(code, port)
+        val pairing = PhoneServices.of(context).pairing
+        val job = pairing.submit(code, port) ?: return
+        val pending = goAsync()
+        pairing.scope.launch {
+            try {
+                withTimeoutOrNull(HOLD_MS) { job.join() }
+            } finally {
+                pending.finish()
+            }
+        }
+    }
+
+    private companion object {
+        /** 广播最短 10 秒不结束就算无响应,留余量。够找配对端口(5 秒)再配对;之后的连接被冻住也只是晚一点,配对已经记下了。 */
+        const val HOLD_MS = 8_000L
     }
 }
